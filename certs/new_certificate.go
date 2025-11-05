@@ -43,14 +43,8 @@ type Certificate2 struct {
 }
 
 // NewCertificate2 creates a new Certificate which watches the given certFile
-// for changes and reloads it automatically.
-func NewCertificate2(certFile string) (*Certificate2, error) {
-	return loadCertificatePair(certFile, "")
-}
-
-// NewCertificate2WithKey creates a new Certificate which watches the given certFile
 // and keyFile for changes and reloads them automatically.
-func NewCertificate2WithKey(certFile, keyFile string) (*Certificate2, error) {
+func NewCertificate2(certFile, keyFile string) (*Certificate2, error) {
 	return loadCertificatePair(certFile, keyFile)
 }
 

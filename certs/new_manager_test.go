@@ -26,7 +26,7 @@ import (
 
 func TestManager2_Close(t *testing.T) {
 	loadCerts := func() ([]*Certificate2, error) {
-		cert, err := NewCertificate2("public.crt")
+		cert, err := NewCertificate2("public.crt", "private.key")
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +50,7 @@ func TestManager2_Close(t *testing.T) {
 
 func TestManager2_CloseMultipleTimes(t *testing.T) {
 	loadCerts := func() ([]*Certificate2, error) {
-		cert, err := NewCertificate2("public.crt")
+		cert, err := NewCertificate2("public.crt", "private.key")
 		if err != nil {
 			return nil, err
 		}
@@ -70,13 +70,13 @@ func TestManager2_CloseMultipleTimes(t *testing.T) {
 func TestManager2_ReloadOnSIGHUP(t *testing.T) {
 	callCount := 0
 	loadCerts := func() ([]*Certificate2, error) {
-		certFile := "public.crt"
+		certFile, keyFile := "public.crt", "private.key"
 		if callCount%2 == 1 {
-			certFile = "new-public.crt"
+			certFile, keyFile = "new-public.crt", "new-private.key"
 		}
 		callCount++
 
-		cert, err := NewCertificate2(certFile)
+		cert, err := NewCertificate2(certFile, keyFile)
 		if err != nil {
 			return nil, err
 		}

@@ -32,29 +32,7 @@ func init() {
 }
 
 func TestNewCertificate2(t *testing.T) {
-	cert, err := NewCertificate2("public.crt")
-	if err != nil {
-		t.Fatalf("Failed to create certificate: %v", err)
-	}
-	defer cert.Close()
-
-	if cert.Load() == nil {
-		t.Error("Expected loaded certificate, got nil")
-	}
-
-	expectedCert, err := loadTLSCertificate("public.crt", "")
-	if err != nil {
-		t.Fatalf("Failed to load expected certificate: %v", err)
-	}
-
-	loadedCert := cert.Load()
-	if !reflect.DeepEqual(loadedCert.Certificate, expectedCert.Certificate) {
-		t.Error("Loaded certificate doesn't match expected certificate")
-	}
-}
-
-func TestNewCertificate2WithKey(t *testing.T) {
-	cert, err := NewCertificate2WithKey("public.crt", "private.key")
+	cert, err := NewCertificate2("public.crt", "private.key")
 	if err != nil {
 		t.Fatalf("Failed to create certificate with key: %v", err)
 	}
@@ -75,36 +53,29 @@ func TestNewCertificate2WithKey(t *testing.T) {
 	}
 }
 
-func TestNewCertificate2_InvalidFile(t *testing.T) {
-	_, err := NewCertificate2("nonexistent.crt")
-	if err == nil {
-		t.Error("Expected error for nonexistent file, got nil")
-	}
-}
-
-func TestNewCertificate2WithKey_InvalidCertFile(t *testing.T) {
-	_, err := NewCertificate2WithKey("nonexistent.crt", "private.key")
+func TestNewCertificate2_InvalidCertFile(t *testing.T) {
+	_, err := NewCertificate2("nonexistent.crt", "private.key")
 	if err == nil {
 		t.Error("Expected error for nonexistent cert file, got nil")
 	}
 }
 
-func TestNewCertificate2WithKey_InvalidKeyFile(t *testing.T) {
-	_, err := NewCertificate2WithKey("public.crt", "nonexistent.key")
+func TestNewCertificate2_InvalidKeyFile(t *testing.T) {
+	_, err := NewCertificate2("public.crt", "nonexistent.key")
 	if err == nil {
 		t.Error("Expected error for nonexistent key file, got nil")
 	}
 }
 
-func TestNewCertificate2WithKey_MismatchedPair(t *testing.T) {
-	_, err := NewCertificate2WithKey("new-public.crt", "private.key")
+func TestNewCertificate2_MismatchedPair(t *testing.T) {
+	_, err := NewCertificate2("new-public.crt", "private.key")
 	if err == nil {
 		t.Error("Expected error for mismatched cert/key pair, got nil")
 	}
 }
 
 func TestCertificate2Close(t *testing.T) {
-	cert, err := NewCertificate2("public.crt")
+	cert, err := NewCertificate2("public.crt", "private.key")
 	if err != nil {
 		t.Fatalf("Failed to create certificate: %v", err)
 	}
@@ -112,56 +83,15 @@ func TestCertificate2Close(t *testing.T) {
 	cert.Close()
 }
 
-func TestCertificate2_AutoReloadSingleFile(t *testing.T) {
-	testCertificate2AutoReloadSingleFile(t, false)
+func TestCeNewCertificate2ithKey(t *testing.T) {
+	testCertificate2AutoReload(t, false)
 }
 
-func TestCertificate2_AutoReloadSingleFileSymlink(t *testing.T) {
-	testCertificate2AutoReloadSingleFile(t, true)
+func TestCertificate2_AutoReloadSymlink(t *testing.T) {
+	testCertificate2AutoReload(t, true)
 }
 
-func testCertificate2AutoReloadSingleFile(t *testing.T, symlink bool) {
-	tmpDir := t.TempDir()
-	tmpCert := filepath.Join(tmpDir, "test.crt")
-
-	copyFile(t, "public.crt", tmpCert, symlink)
-
-	cert, err := NewCertificate2(tmpCert)
-	if err != nil {
-		t.Fatalf("Failed to create certificate: %v", err)
-	}
-	defer cert.Close()
-
-	originalCert := cert.Load()
-
-	overwriteFile(t, "new-public.crt", tmpCert, symlink)
-
-	waitForCert(symlink)
-
-	newCert := cert.Load()
-	if reflect.DeepEqual(originalCert.Certificate, newCert.Certificate) {
-		t.Error("Certificate was not reloaded after file change")
-	}
-
-	expectedCert, err := loadTLSCertificate("new-public.crt", "")
-	if err != nil {
-		t.Fatalf("Failed to load expected certificate: %v", err)
-	}
-
-	if !reflect.DeepEqual(newCert.Certificate, expectedCert.Certificate) {
-		t.Error("Reloaded certificate doesn't match expected certificate")
-	}
-}
-
-func TestCertificate2_AutoReloadWithKey(t *testing.T) {
-	testCertificate2AutoReloadWithKey(t, false)
-}
-
-func TestCertificate2_AutoReloadWithKeySymlink(t *testing.T) {
-	testCertificate2AutoReloadWithKey(t, true)
-}
-
-func testCertificate2AutoReloadWithKey(t *testing.T, symlink bool) {
+func testCertificate2AutoReload(t *testing.T, symlink bool) {
 	tmpDir := t.TempDir()
 	tmpCert := filepath.Join(tmpDir, "test.crt")
 	tmpKey := filepath.Join(tmpDir, "test.key")
@@ -169,7 +99,7 @@ func testCertificate2AutoReloadWithKey(t *testing.T, symlink bool) {
 	copyFile(t, "public.crt", tmpCert, symlink)
 	copyFile(t, "private.key", tmpKey, symlink)
 
-	cert, err := NewCertificate2WithKey(tmpCert, tmpKey)
+	cert, err := NewCertificate2(tmpCert, tmpKey)
 	if err != nil {
 		t.Fatalf("Failed to create certificate: %v", err)
 	}
@@ -212,7 +142,7 @@ func testCertificate2AutoReloadCertFileOnly(t *testing.T, symlink bool) {
 	copyFile(t, "public.crt", tmpCert, symlink)
 	copyFile(t, "private.key", tmpKey, symlink)
 
-	cert, err := NewCertificate2WithKey(tmpCert, tmpKey)
+	cert, err := NewCertificate2(tmpCert, tmpKey)
 	if err != nil {
 		t.Fatalf("Failed to create certificate: %v", err)
 	}
@@ -248,7 +178,7 @@ func testCertificate2InvalidReloadIgnored(t *testing.T, symlink bool) {
 
 	copyFile(t, "public.crt", tmpCert, symlink)
 
-	cert, err := NewCertificate2(tmpCert)
+	cert, err := NewCertificate2(tmpCert, "private.key")
 	if err != nil {
 		t.Fatalf("Failed to create certificate: %v", err)
 	}
