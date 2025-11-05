@@ -68,7 +68,6 @@ func NewManager2(loadCerts func() ([]*Certificate2, error)) (*Manager2, error) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGHUP)
 	go func() {
-		defer close(closeCh)
 		defer signal.Stop(ch)
 
 		for {
@@ -95,7 +94,7 @@ func NewManager2(loadCerts func() ([]*Certificate2, error)) (*Manager2, error) {
 func (m *Manager2) Close() {
 	// only close once
 	if atomic.CompareAndSwapInt32(&m.closed, 0, 1) {
-		m.close <- struct{}{}
+		close(m.close)
 	}
 }
 

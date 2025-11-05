@@ -20,7 +20,7 @@ package certs
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"crypto/tls"
 	"io"
 	"log"
@@ -118,7 +118,7 @@ func watchFile(ctx context.Context, path string, ch chan notify.EventInfo, wg *s
 		}
 		defer f.Close()
 
-		h := md5.New()
+		h := sha256.New()
 		_, err = io.Copy(h, f)
 		if err != nil {
 			return nil, err
