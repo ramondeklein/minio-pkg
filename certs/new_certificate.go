@@ -25,6 +25,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -50,10 +52,6 @@ func NewCertificate2(certFile, keyFile string) (*Certificate2, error) {
 
 	ch := make(chan notify.EventInfo, 1)
 	ctx, cancel := context.WithCancel(context.Background())
-	watchFile(ctx, certFile, ch)
-	if keyFile != "" {
-		watchFile(ctx, keyFile, ch)
-	}
 
 	c := Certificate2{
 		close: func() {
@@ -64,15 +62,20 @@ func NewCertificate2(certFile, keyFile string) (*Certificate2, error) {
 	}
 	c.Store(&cert)
 
+	if err := watchFile(ctx, certFile, ch); err != nil {
+		c.close()
+		return nil, err
+	}
+	if err := watchFile(ctx, keyFile, ch); err != nil {
+		c.close()
+		return nil, err
+	}
+
 	go func() {
 		for range ch {
 			newCert, err := tls.LoadX509KeyPair(certFile, keyFile)
 			if err != nil {
-				if keyFile != "" {
-					log.Printf("reloading certificate %s and key %s failed: %s", certFile, keyFile, err)
-				} else {
-					log.Printf("reloading certificate %s failed: %s", certFile, err)
-				}
+				log.Printf("reloading certificate %s and key %s failed: %s", certFile, keyFile, err)
 				continue
 			}
 			c.Store(&newCert)
@@ -95,7 +98,13 @@ func watchFile(ctx context.Context, path string, c chan notify.EventInfo) error 
 	}
 	symLink := st.Mode()&os.ModeSymlink == os.ModeSymlink
 	if !symLink {
-		return notify.Watch(path, c, notify.InCloseWrite)
+		// Windows doesn't allow for watching file changes but instead allows
+		// for directory changes only, while we can still watch for changes
+		// on files on other platforms.
+		if runtime.GOOS == "windows" {
+			path = filepath.Dir(path)
+		}
+		return notify.Watch(path, c, eventWrite...)
 	}
 
 	hashFile := func() ([]byte, error) {
