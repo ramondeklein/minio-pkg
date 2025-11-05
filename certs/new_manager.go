@@ -43,7 +43,7 @@ type Manager2 struct {
 //   - A SIGHUP signal is received (this will rescan all certificates)
 //
 // The manager is using internal synchronization and is safe for concurrent
-// use. Make sure the call Close when the manager is no longer needed.
+// use. Make sure to call Close when the manager is no longer needed.
 func NewManager2(loadCerts func() ([]*Certificate2, error)) (*Manager2, error) {
 	// Load initial certificates
 	certs, err := loadCerts()

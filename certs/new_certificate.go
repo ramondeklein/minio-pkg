@@ -33,7 +33,9 @@ import (
 	"github.com/rjeczalik/notify"
 )
 
-// Certificate2 wraps a tls.Certificate2 and automatically reloads it
+var symlinkReloadInterval = 10 * time.Second
+
+// Certificate2 wraps a tls.Certificate and automatically reloads it
 // when the underlying files change.
 type Certificate2 struct {
 	atomic.Pointer[tls.Certificate]
@@ -118,7 +120,7 @@ func loadTLSCertificate(certFile, keyFile string) (tls.Certificate, error) {
 		}
 	}
 	if len(cert.Certificate) == 0 {
-		return cert, fmt.Errorf("No CERTIFICATE blocks in %s", certFile)
+		return cert, fmt.Errorf("no CERTIFICATE blocks in %s", certFile)
 	}
 	return cert, nil
 }
@@ -154,7 +156,7 @@ func watchFile(ctx context.Context, path string, c chan notify.EventInfo) error 
 	}
 
 	go func() {
-		t := time.NewTicker(10 * time.Second)
+		t := time.NewTicker(symlinkReloadInterval)
 		defer t.Stop()
 		for {
 			select {
