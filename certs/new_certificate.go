@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -53,20 +54,23 @@ func NewCertificate2(certFile, keyFile string) (*Certificate2, error) {
 	ch := make(chan notify.EventInfo, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	c := Certificate2{
-		close: func() {
-			notify.Stop(ch)
-			close(ch)
-			cancel()
-		},
+	var wg sync.WaitGroup
+
+	var c Certificate2
+	c.close = func() {
+		c.close = nil // don't run multiple times
+		notify.Stop(ch)
+		cancel()
+		wg.Wait() // don't close channel before goroutine is done
+		close(ch)
 	}
 	c.Store(&cert)
 
-	if err := watchFile(ctx, certFile, ch); err != nil {
+	if err := watchFile(ctx, certFile, ch, &wg); err != nil {
 		c.close()
 		return nil, err
 	}
-	if err := watchFile(ctx, keyFile, ch); err != nil {
+	if err := watchFile(ctx, keyFile, ch, &wg); err != nil {
 		c.close()
 		return nil, err
 	}
@@ -91,7 +95,7 @@ func (c *Certificate2) Close() {
 	}
 }
 
-func watchFile(ctx context.Context, path string, c chan notify.EventInfo) error {
+func watchFile(ctx context.Context, path string, ch chan notify.EventInfo, wg *sync.WaitGroup) error {
 	st, err := os.Lstat(path)
 	if err != nil {
 		return err
@@ -104,7 +108,7 @@ func watchFile(ctx context.Context, path string, c chan notify.EventInfo) error 
 		if runtime.GOOS == "windows" {
 			path = filepath.Dir(path)
 		}
-		return notify.Watch(path, c, eventWrite...)
+		return notify.Watch(path, ch, eventWrite...)
 	}
 
 	hashFile := func() ([]byte, error) {
@@ -127,7 +131,10 @@ func watchFile(ctx context.Context, path string, c chan notify.EventInfo) error 
 		return err
 	}
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		t := time.NewTicker(symlinkReloadInterval)
 		defer t.Stop()
 		for {
@@ -138,7 +145,7 @@ func watchFile(ctx context.Context, path string, c chan notify.EventInfo) error 
 				newHash, err := hashFile()
 				if err == nil && !bytes.Equal(lastHash, newHash) {
 					lastHash = newHash
-					c <- eventInfo{path, notify.Write}
+					ch <- eventInfo{path, notify.Write}
 				}
 			}
 		}
