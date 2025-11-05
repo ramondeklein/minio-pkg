@@ -26,7 +26,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -104,11 +103,11 @@ func watchFile(ctx context.Context, path string, ch chan notify.EventInfo, wg *s
 	if !symLink {
 		// Windows doesn't allow for watching file changes but instead allows
 		// for directory changes only, while we can still watch for changes
-		// on files on other platforms.
-		if runtime.GOOS == "windows" {
-			path = filepath.Dir(path)
-		}
-		return notify.Watch(path, ch, eventWrite...)
+		// on files on other platforms. For other platforms it's also better
+		// to watch the directory to catch all changes. Some updates are written
+		// to a new file and then renamed to the destination file. This method
+		// ensures we catch all such changes.
+		return notify.Watch(filepath.Dir(path), ch, eventWrite...)
 	}
 
 	hashFile := func() ([]byte, error) {
