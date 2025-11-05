@@ -22,8 +22,6 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/tls"
-	"encoding/pem"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -45,18 +43,7 @@ type Certificate2 struct {
 // NewCertificate2 creates a new Certificate which watches the given certFile
 // and keyFile for changes and reloads them automatically.
 func NewCertificate2(certFile, keyFile string) (*Certificate2, error) {
-	return loadCertificatePair(certFile, keyFile)
-}
-
-// Close stops watching the certificate files and releases all resources.
-func (c *Certificate2) Close() {
-	if c.close != nil {
-		c.close()
-	}
-}
-
-func loadCertificatePair(certFile, keyFile string) (*Certificate2, error) {
-	cert, err := loadTLSCertificate(certFile, keyFile)
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +66,7 @@ func loadCertificatePair(certFile, keyFile string) (*Certificate2, error) {
 
 	go func() {
 		for range ch {
-			newCert, err := loadTLSCertificate(certFile, keyFile)
+			newCert, err := tls.LoadX509KeyPair(certFile, keyFile)
 			if err != nil {
 				if keyFile != "" {
 					log.Printf("reloading certificate %s and key %s failed: %s", certFile, keyFile, err)
@@ -94,29 +81,11 @@ func loadCertificatePair(certFile, keyFile string) (*Certificate2, error) {
 	return &c, nil
 }
 
-func loadTLSCertificate(certFile, keyFile string) (tls.Certificate, error) {
-	if keyFile != "" {
-		return tls.LoadX509KeyPair(certFile, keyFile)
+// Close stops watching the certificate files and releases all resources.
+func (c *Certificate2) Close() {
+	if c.close != nil {
+		c.close()
 	}
-	var cert tls.Certificate
-	certPEMBlock, err := os.ReadFile(certFile)
-	if err != nil {
-		return cert, err
-	}
-	for {
-		var certDERBlock *pem.Block
-		certDERBlock, certPEMBlock = pem.Decode(certPEMBlock)
-		if certDERBlock == nil {
-			break
-		}
-		if certDERBlock.Type == "CERTIFICATE" {
-			cert.Certificate = append(cert.Certificate, certDERBlock.Bytes)
-		}
-	}
-	if len(cert.Certificate) == 0 {
-		return cert, fmt.Errorf("no CERTIFICATE blocks in %s", certFile)
-	}
-	return cert, nil
 }
 
 func watchFile(ctx context.Context, path string, c chan notify.EventInfo) error {

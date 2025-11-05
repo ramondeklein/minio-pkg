@@ -18,6 +18,7 @@
 package certs
 
 import (
+	"crypto/tls"
 	"reflect"
 	"syscall"
 	"testing"
@@ -105,7 +106,7 @@ func TestManager2_ReloadOnSIGHUP(t *testing.T) {
 		t.Error("Expected certificates to be reloaded after SIGHUP")
 	}
 
-	expectedCert, err := loadTLSCertificate("new-public.crt", "")
+	expectedCert, err := tls.LoadX509KeyPair("new-public.crt", "new-private.key")
 	if err != nil {
 		t.Fatalf("Failed to load expected certificate: %v", err)
 	}

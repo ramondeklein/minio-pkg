@@ -202,38 +202,6 @@ func testCertificate2InvalidReloadIgnored(t *testing.T, symlink bool) {
 	}
 }
 
-func TestLoadTLSCertificate_EmptyFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	tmpCert := filepath.Join(tmpDir, "empty.crt")
-
-	if err := os.WriteFile(tmpCert, []byte(""), 0o600); err != nil {
-		t.Fatalf("Failed to create empty cert file: %v", err)
-	}
-
-	_, err := loadTLSCertificate(tmpCert, "")
-	if err == nil {
-		t.Error("Expected error for empty certificate file, got nil")
-	}
-}
-
-func TestLoadTLSCertificate_NoCertificateBlock(t *testing.T) {
-	tmpDir := t.TempDir()
-	tmpCert := filepath.Join(tmpDir, "nocert.crt")
-
-	pemData := `-----BEGIN RSA PRIVATE KEY-----
-MIIBogIBAAJBALRiMLAA...
------END RSA PRIVATE KEY-----`
-
-	if err := os.WriteFile(tmpCert, []byte(pemData), 0o600); err != nil {
-		t.Fatalf("Failed to create cert file: %v", err)
-	}
-
-	_, err := loadTLSCertificate(tmpCert, "")
-	if err == nil {
-		t.Error("Expected error for file with no CERTIFICATE block, got nil")
-	}
-}
-
 func copyFile(t *testing.T, src, dst string, symlink bool) {
 	t.Helper()
 	data, err := os.ReadFile(src)
