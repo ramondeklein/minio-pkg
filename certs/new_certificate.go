@@ -89,8 +89,8 @@ func NewCertificate2(certFile, keyFile string) (*Certificate2, error) {
 
 // Close stops watching the certificate files and releases all resources.
 func (c *Certificate2) Close() {
-	if c.close != nil {
-		c.close()
+	if cl := c.close; cl != nil {
+		cl()
 	}
 }
 
