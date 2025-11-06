@@ -212,9 +212,7 @@ func (m *Manager2) GetAllCertificates() []*x509.Certificate {
 	for i := range *certs {
 		c := *((*certs)[i].Load())
 		if c.Leaf != nil {
-			// marshal and parse to create a deep copy
-			cBytes := c.Leaf.Raw
-			cert, err := x509.ParseCertificate(cBytes)
+			cert, err := x509.ParseCertificate(c.Leaf.Raw)
 			if err != nil {
 				continue
 			}
@@ -222,4 +220,14 @@ func (m *Manager2) GetAllCertificates() []*x509.Certificate {
 		}
 	}
 	return result
+}
+
+// HasCerts checks if any certificates have been loaded
+func (m *Manager2) HasCerts() bool {
+	if m == nil {
+		return false
+	}
+
+	certs := m.certs.Load()
+	return len(*certs) > 0
 }
